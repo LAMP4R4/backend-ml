@@ -1,8 +1,5 @@
 package com.lamp.amazonas.security;
 
-import java.util.Arrays;
-import java.util.Collections;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,13 +12,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.Customizer;
+
+import jakarta.servlet.http.HttpServletResponse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
-
 public class SecurityConfig {
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtTokenProvider tokenProvider;
     private final CustomUserDetailsService customUserDetailsService;
@@ -50,10 +51,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // AQUÍ ESTÁ LA LÍNEA CORREGIDA
+                .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // Permitir OPTIONS para CORS preflight en todos los endpoints
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/productos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categorias/**").permitAll()
@@ -71,33 +76,36 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/proveedores/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/proveedores/**").hasAuthority("ROLE_ADMIN")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/ventas")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/venta").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/venta/**")
                         .hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/ventas").hasAuthority("ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/ventas/mis-compras").hasAuthority("ROLE_CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/venta/mis-compras").hasAuthority("ROLE_CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/venta/**").hasAuthority("ROLE_ADMIN")
+
                         .requestMatchers("/api/v1/pagos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
 
-                        .anyRequest().authenticated());
+                        .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            logger.error("ERROR 401 - No autenticado para: {} {} - {}",
+                                    request.getMethod(), request.getRequestURI(), authException.getMessage());
+                            response.setContentType("application/json");
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("{\"error\":\"No autenticado. Token JWT inválido o ausente.\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            logger.error("ERROR 403 - Acceso denegado para: {} {} - {}",
+                                    request.getMethod(), request.getRequestURI(), accessDeniedException.getMessage());
+                            response.setContentType("application/json");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.getWriter()
+                                    .write("{\"error\":\"Acceso denegado. No tienes permisos suficientes.\"}");
+                        }));
 
         http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
+        logger.info("=== Configuración de seguridad cargada correctamente ===");
+
         return http.build();
     }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // configuration.setAllowedOrigins(Collections.singletonList("http://168.231.67.126:5173"));
-        configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173",
-                "http://qyjcnbbsv9tzdlofdphp4cqe.168.231.67.126.sslip.io"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-        configuration.setExposedHeaders(Collections.singletonList("Authorization"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
 }
