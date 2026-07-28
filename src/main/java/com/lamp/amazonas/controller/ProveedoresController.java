@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/proveedores")
-@CrossOrigin(origins = {"http://localhost:5173", "http://qyjcnbbsv9tzdlofdphp4cqe.168.231.67.126.sslip.io"})
+@CrossOrigin(origins = "http://localhost:5173")
 @RequiredArgsConstructor
 public class ProveedoresController {
 

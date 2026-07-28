@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/v1/productos") // mapeo general productos
-@CrossOrigin(origins = {"http://localhost:5173", "http://qyjcnbbsv9tzdlofdphp4cqe.168.231.67.126.sslip.io"}) // permiso de react para consumir la api
+@CrossOrigin(origins = "http://localhost:5173") // permiso de react para consumir la api
 @RequiredArgsConstructor
 public class ProductoController {
 
