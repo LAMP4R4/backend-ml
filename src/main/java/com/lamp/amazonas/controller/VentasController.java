@@ -26,7 +26,8 @@ public class VentasController {
 
     private final VentasService servicio;
 
-    @GetMapping
+    // @GetMapping // original: sin barra final, no coincidia con GET /api/v1/ventas/ del frontend (colisionaba con @PostMapping("/") -> 405 -> /error -> 401)
+    @GetMapping("/")
     public ResponseEntity<List<VentasEntity>> listar() {
         return ResponseEntity.ok(servicio.obtenerTodo());
     }

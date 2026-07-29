@@ -83,11 +83,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/v1/proveedores/**").hasAuthority("ROLE_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/proveedores/**").hasAuthority("ROLE_ADMIN")
 
-                        .requestMatchers(HttpMethod.POST, "/api/v1/venta").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/v1/venta/**")
+                        // Reglas originales: usaban "venta" (singular) pero el controlador real esta en
+                        // "/api/v1/ventas" (plural), por lo que nunca coincidian y todo caia en anyRequest().authenticated()
+                        // .requestMatchers(HttpMethod.POST, "/api/v1/venta").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                        // .requestMatchers(HttpMethod.POST, "/api/v1/venta/**")
+                        // .hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                        // .requestMatchers(HttpMethod.GET, "/api/v1/venta/mis-compras").hasAuthority("ROLE_CLIENTE")
+                        // .requestMatchers(HttpMethod.GET, "/api/v1/venta/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ventas").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ventas/**")
                         .hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/venta/mis-compras").hasAuthority("ROLE_CLIENTE")
-                        .requestMatchers(HttpMethod.GET, "/api/v1/venta/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ventas/mis-compras").hasAuthority("ROLE_CLIENTE")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/ventas/**").hasAuthority("ROLE_ADMIN")
+                        // Reglas nuevas: PUT/DELETE de ventas no tenian ninguna restriccion explicita antes,
+                        // caian en anyRequest().authenticated() (cualquier usuario logueado, no solo ADMIN)
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/ventas/**").hasAuthority("ROLE_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/ventas/**").hasAuthority("ROLE_ADMIN")
 
                         .requestMatchers("/api/v1/pagos/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
 
